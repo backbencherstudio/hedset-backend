@@ -25,6 +25,7 @@ model User {
   timezone    String?
   dateOfBirth String?
   gender      String?
+  lifestyle   Lifestyle?
 
   //parmitions
   notificationAccess Boolean @default(true)
@@ -52,4 +53,9 @@ model User {
 enum userStatus {
   user
   admin
+}
+
+enum Lifestyle {
+  student
+  senior
 }

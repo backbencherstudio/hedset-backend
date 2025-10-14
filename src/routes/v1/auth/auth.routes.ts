@@ -45,6 +45,9 @@ const authRoutes = (fastify: FastifyInstance) => {
   fastify.post("/2fa/email/verifyotp", email2FAVerifyOtp);
   fastify.post("/2fa/email/recentotp", email2FARecentOtp);
 
+  //email change
+  // fastify.post('/change-email/sendotp', chnageEmail)
+
   //controll parmitions
   fastify.patch(
     "/parmitions",

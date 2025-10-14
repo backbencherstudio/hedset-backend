@@ -14,6 +14,7 @@ import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
 import { authenticator } from "otplib";
 import { uploadsDir } from "../../../config/storage.config";
+import { Lifestyle } from "@prisma/client";
 
 const downloadAndSaveImage = async (imageUrl: string): Promise<string> => {
   try {
@@ -1000,6 +1001,8 @@ export const updateUser = async (request, reply) => {
     }
   };
 
+  const allowedLifestyles = ["student", "Senior"];
+
   try {
     const prisma = request.server.prisma;
     const userId = request.user?.id;
@@ -1012,6 +1015,7 @@ export const updateUser = async (request, reply) => {
       "timezone",
       "dateOfBirth",
       "gender",
+      "lifestyle",
     ];
 
     const updateData: Record<string, any> = {};
@@ -1022,6 +1026,16 @@ export const updateUser = async (request, reply) => {
       if (value !== undefined && value !== null && value !== "") {
         updateData[field] = value;
       }
+    }
+
+    if (
+      updateData.lifestyle &&
+      !allowedLifestyles.includes(updateData.lifestyle)
+    ) {
+      return reply.code(400).send({
+        success: false,
+        message: `Invalid lifestyle. Use: ${allowedLifestyles.join(" or ")}`,
+      });
     }
 
     // Handle avatar update
@@ -1058,6 +1072,7 @@ export const updateUser = async (request, reply) => {
         dateOfBirth: true,
         gender: true,
         avatar: true,
+        lifestyle: true,
         createdAt: true,
         updatedAt: true,
       },
