@@ -40,14 +40,11 @@ const downloadAndSaveImage = async (imageUrl: string): Promise<string> => {
 
 export const registerSendOtp = async (request, reply) => {
   try {
-    const { name, email, password } =
-      request.body;
+    const { name, email, password } = request.body;
 
-    const missingField = [
-      "name",
-      "email",
-      "password",
-    ].find((field) => !request.body[field]);
+    const missingField = ["name", "email", "password"].find(
+      (field) => !request.body[field]
+    );
 
     if (missingField) {
       return reply.status(400).send({
@@ -90,7 +87,7 @@ export const registerSendOtp = async (request, reply) => {
 
     return reply
       .status(200)
-      .send({ success: true, message: "OTP stored in Redis" });
+      .send({ success: true, message: "send otp in your email!" });
   } catch (error) {
     request.log.error(error);
     return reply
@@ -149,13 +146,13 @@ export const registerVerifyOtp = async (request, reply) => {
       },
     });
 
-    const chatRoom = await prisma.chatRoom.create({
-      data: {
-        userId: newUser.id,
-      },
-    });
+    // const chatRoom = await prisma.chatRoom.create({
+    //   data: {
+    //     userId: newUser.id,
+    //   },
+    // });
 
-    console.log("roome :", chatRoom);
+    // console.log("roome :", chatRoom);
 
     await redis.del(`register-verify-otp:${email}`);
 
@@ -236,13 +233,6 @@ export const getRecentOtp = async (request, reply) => {
 
 ///login
 export const googleAuth = async (request, reply) => {
-  const parseNameFromFullName = (fullName: string) => {
-    const nameParts = fullName.trim().split(/\s+/);
-    const firstName = nameParts[0] || "";
-    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
-    return { firstName, lastName };
-  };
-
   try {
     const { email, name, image } = request.body;
 
@@ -284,30 +274,27 @@ export const googleAuth = async (request, reply) => {
     }
 
     const processedAvatar = image ? await downloadAndSaveImage(image) : null;
-    const { firstName, lastName } = parseNameFromFullName(name);
 
     const newUser = await prisma.user.create({
       data: {
         email,
-        firstName,
-        lastName,
-        fullName: name,
+        name,
         ...(processedAvatar && { avatar: processedAvatar }),
       },
     });
 
-    const chatRoom = await prisma.chatRoom.create({
-      data: {
-        userId: newUser.id,
-      },
-    });
+    // const chatRoom = await prisma.chatRoom.create({
+    //   data: {
+    //     userId: newUser.id,
+    //   },
+    // });
 
-    if (chatRoom) {
-      console.log("chatRoom: ", chatRoom);
-    }
-    console.log(chatRoom);
+    // if (chatRoom) {
+    //   console.log("chatRoom: ", chatRoom);
+    // }
+    // console.log(chatRoom);
 
-    console.log("roome :", chatRoom);
+    // console.log("roome :", chatRoom);
 
     const token = generateJwtToken({
       id: newUser.id,
@@ -522,10 +509,12 @@ export const forgotPasswordVerifyOtp = async (request, reply) => {
   try {
     const { email, otp } = request.body;
 
-    if (!email || !otp) {
+    const missingField = ["email", "otp"].find((field) => !request.body[field]);
+
+    if (missingField) {
       return reply.status(400).send({
         success: false,
-        message: "Email and OTP are required!",
+        message: `${missingField} is required!`,
       });
     }
 
@@ -594,10 +583,14 @@ export const forgotPasswordReset = async (request, reply) => {
   try {
     const { email, password } = request.body;
 
-    if (!email || !password) {
+    const missingField = ["email", "password"].find(
+      (field) => !request.body[field]
+    );
+
+    if (missingField) {
       return reply.status(400).send({
         success: false,
-        message: "Email and password are required!",
+        message: `${missingField} is required!`,
       });
     }
 
@@ -776,13 +769,14 @@ export const email2FAVerifyOtp = async (request, reply) => {
   try {
     const { email, otp } = request.body;
 
-    if (!email || !otp) {
+    const missingField = ["email", "otp"].find((field) => !request.body[field]);
+
+    if (missingField) {
       return reply.status(400).send({
         success: false,
-        message: "Email and OTP are required!",
+        message: `${missingField} is required!`,
       });
     }
-
     const prisma = request.server.prisma;
     const redis = request.server.redis;
 
@@ -909,12 +903,21 @@ export const parmitions = async (request, reply) => {
   try {
     const prisma = request.server.prisma;
     const userId = request.user?.id;
-    const { emailAccess, phoneAccess, pushAccess } = request.body;
+
+    const {
+      notificationAccess,
+      emailAccess,
+      appUpdateAccess,
+      messageAccess,
+      soundAccess,
+    } = request.body;
 
     if (
+      notificationAccess === undefined &&
       emailAccess === undefined &&
-      phoneAccess === undefined &&
-      pushAccess === undefined
+      appUpdateAccess === undefined &&
+      messageAccess === undefined &&
+      soundAccess === undefined
     ) {
       return reply.status(400).send({
         success: false,
@@ -925,16 +928,19 @@ export const parmitions = async (request, reply) => {
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
+        ...(notificationAccess !== undefined && { notificationAccess }),
         ...(emailAccess !== undefined && { emailAccess }),
-        ...(phoneAccess !== undefined && { phoneAccess }),
-        ...(pushAccess !== undefined && { pushAccess }),
+        ...(appUpdateAccess !== undefined && { appUpdateAccess }),
+        ...(messageAccess !== undefined && { messageAccess }),
+        ...(soundAccess !== undefined && { soundAccess }),
       },
       select: {
         id: true,
         email: true,
-        emailAccess: true,
-        phoneAccess: true,
-        pushAccess: true,
+        notificationAccess: true,
+        appUpdateAccess: true,
+        messageAccess: true,
+        soundAccess: true,
       },
     });
 
@@ -954,11 +960,6 @@ export const parmitions = async (request, reply) => {
 };
 
 export const updateUser = async (request, reply) => {
-  const toInt = (val: any) => {
-    const parsed = parseInt(val, 10);
-    return isNaN(parsed) ? undefined : parsed;
-  };
-
   const removeFile = (filePath: string) => {
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
@@ -968,33 +969,28 @@ export const updateUser = async (request, reply) => {
   try {
     const prisma = request.server.prisma;
     const userId = request.user?.id;
+
     const allowedFields = [
-      "firstName",
-      "lastName",
-      "companyName",
-      "jobTitle",
+      "name",
+      "email",
+      "password",
       "phone",
       "timezone",
-      "dateFormat",
-      "sessionTimeout",
-      "passwordExpiry",
+      "dateOfBirth",
+      "gender",
     ];
 
     const updateData: Record<string, any> = {};
+
+    // Populate updateData with non-empty values
     for (const field of allowedFields) {
       const value = request.body[field];
       if (value !== undefined && value !== null && value !== "") {
-        if (field === "passwordExpiry" || field === "sessionTimeout") {
-          const parsed = parseInt(value, 10);
-          if (!isNaN(parsed)) {
-            updateData[field] = parsed;
-          }
-        } else {
-          updateData[field] = value;
-        }
+        updateData[field] = value;
       }
     }
 
+    // Handle avatar update
     if (request.file) {
       const currentUser = await prisma.user.findUnique({
         where: { id: userId },
@@ -1015,41 +1011,25 @@ export const updateUser = async (request, reply) => {
       });
     }
 
-    if (updateData.firstName || updateData.lastName) {
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { firstName: true, lastName: true },
-      });
-
-      updateData.fullName = `${
-        (updateData.firstName ?? user?.firstName) || ""
-      } ${(updateData.lastName ?? user?.lastName) || ""}`.trim();
-    }
-
+    // Update user in the database
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: updateData,
       select: {
         id: true,
+        name: true,
         email: true,
-        firstName: true,
-        lastName: true,
-        fullName: true,
-        companyName: true,
-        jobTitle: true,
         phone: true,
         timezone: true,
-        dateFormat: true,
-        sessionTimeout: true,
-        passwordExpiry: true,
+        dateOfBirth: true,
+        gender: true,
         avatar: true,
-        two_factor_authentication: true,
-        type: true,
         createdAt: true,
         updatedAt: true,
       },
     });
 
+    // Return success
     return reply.code(200).send({
       success: true,
       message: "User profile updated successfully",

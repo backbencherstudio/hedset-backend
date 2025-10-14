@@ -27,9 +27,11 @@ model User {
   gender      String?
 
   //parmitions
-  emailAccess Boolean @default(true)
-  phoneAccess Boolean @default(false)
-  pushAccess  Boolean @default(false)
+  notificationAccess Boolean @default(true)
+  emailAccess        Boolean @default(true)
+  appUpdateAccess    Boolean @default(true)
+  messageAccess      Boolean @default(true)
+  soundAccess        Boolean @default(true)
 
   //sequrity
   sessionTimeout            Int?
