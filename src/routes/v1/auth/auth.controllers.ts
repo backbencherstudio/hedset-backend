@@ -703,6 +703,7 @@ export const forgotPasswordRecentOtp = async (request, reply) => {
     return reply.status(200).send({
       success: true,
       message: "New OTP sent successfully",
+      otp: process.env.NODE_ENV === "development" ? newOtp : null,
     });
   } catch (error) {
     request.log.error(error);
@@ -757,6 +758,7 @@ export const email2FASendOtp = async (request, reply) => {
     return reply.status(200).send({
       success: true,
       message: "2FA OTP sent to your email",
+      otp: process.env.NODE_ENV === "development" ? otp : null,
     });
   } catch (error) {
     request.log.error(error);
@@ -890,7 +892,8 @@ export const email2FARecentOtp = async (request, reply) => {
 
     return reply.status(200).send({
       success: true,
-      message: "New 2FA OTP sent successfully",
+      message: "2FA OTP resent successfull",
+      otp: process.env.NODE_ENV === "development" ? newOtp : null,
     });
   } catch (error) {
     request.log.error(error);
