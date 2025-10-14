@@ -85,9 +85,11 @@ export const registerSendOtp = async (request, reply) => {
       .expire(`register-verify-otp:${email}`, 5 * 60)
       .exec();
 
-    return reply
-      .status(200)
-      .send({ success: true, message: "send otp in your email!" });
+    return reply.status(200).send({
+      success: true,
+      message: "send otp in your email!",
+      otp: process.env.NODE_ENV === "development" ? otp : null,
+    });
   } catch (error) {
     request.log.error(error);
     return reply
@@ -124,7 +126,7 @@ export const registerVerifyOtp = async (request, reply) => {
     if (userData.otp !== otp) {
       return reply.status(400).send({
         success: false,
-        message: "Invalid OTP!",
+        message: "invalid OTP!",
       });
     }
 
@@ -494,6 +496,7 @@ export const forgotPasswordSendOtp = async (request, reply) => {
     return reply.status(200).send({
       success: true,
       message: "OTP sent to your email for password reset",
+      otp: process.env.NODE_ENV === "development" ? otp : null,
     });
   } catch (error) {
     request.log.error(error);
@@ -899,62 +902,90 @@ export const email2FARecentOtp = async (request, reply) => {
   }
 };
 
-export const parmitions = async (request, reply) => {
+export const permissions = async (request, reply) => {
   try {
     const prisma = request.server.prisma;
     const userId = request.user?.id;
 
-    const {
-      notificationAccess,
-      emailAccess,
-      appUpdateAccess,
-      messageAccess,
-      soundAccess,
-    } = request.body;
-
-    if (
-      notificationAccess === undefined &&
-      emailAccess === undefined &&
-      appUpdateAccess === undefined &&
-      messageAccess === undefined &&
-      soundAccess === undefined
-    ) {
-      return reply.status(400).send({
+    if (!userId) {
+      return reply.status(401).send({
         success: false,
-        message: "At least one permission field",
+        message: "User not authenticated",
       });
     }
 
+    const permissions = request.body;
+
+    // Check if at least one permission is provided
+    if (Object.keys(permissions).length === 0) {
+      return reply.status(400).send({
+        success: false,
+        message: "At least one permission field is required",
+      });
+    }
+
+    const validFields = [
+      "notificationAccess",
+      "emailAccess",
+      "appUpdateAccess",
+      "messageAccess",
+      "soundAccess",
+    ];
+
+    // Check if all provided fields are valid
+    for (const field of Object.keys(permissions)) {
+      if (!validFields.includes(field)) {
+        return reply.status(400).send({
+          success: false,
+          message: `Invalid field: "${field}". Valid fields are: ${validFields.join(
+            ", "
+          )}`,
+        });
+      }
+    }
+
+    // Check if all values are boolean
+    for (const [key, value] of Object.entries(permissions)) {
+      if (typeof value !== "boolean") {
+        return reply.status(400).send({
+          success: false,
+          message: `"${key}" must be true or false`,
+        });
+      }
+    }
+
+    // Update user permissions
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: {
-        ...(notificationAccess !== undefined && { notificationAccess }),
-        ...(emailAccess !== undefined && { emailAccess }),
-        ...(appUpdateAccess !== undefined && { appUpdateAccess }),
-        ...(messageAccess !== undefined && { messageAccess }),
-        ...(soundAccess !== undefined && { soundAccess }),
-      },
+      data: permissions,
       select: {
         id: true,
-        email: true,
         notificationAccess: true,
+        emailAccess: true,
         appUpdateAccess: true,
         messageAccess: true,
         soundAccess: true,
       },
     });
 
-    return reply.status(200).send({
+    return reply.send({
       success: true,
-      message: "Permissions updated successfully.",
+      message: "Permissions updated",
       data: updatedUser,
     });
   } catch (error) {
     request.log.error(error);
+
+    if (error.code === "P2025") {
+      return reply.status(404).send({
+        success: false,
+        message: "User not found",
+      });
+    }
+
     return reply.status(500).send({
       success: false,
-      message: "Internal Server Error",
-      error: error instanceof Error ? error.message : "Unknown error",
+      message: "Internal function error",
     });
   }
 };

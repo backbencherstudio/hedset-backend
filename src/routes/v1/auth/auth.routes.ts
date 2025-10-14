@@ -13,7 +13,7 @@ import {
   email2FASendOtp,
   email2FAVerifyOtp,
   email2FARecentOtp,
-  parmitions,
+  permissions,
   updateUser,
   getUserProfile,
 } from "./auth.controllers";
@@ -49,7 +49,7 @@ const authRoutes = (fastify: FastifyInstance) => {
   fastify.patch(
     "/parmitions",
     { preHandler: verifyUser("user", "admin") },
-    parmitions
+    permissions
   );
 
   fastify.patch(
