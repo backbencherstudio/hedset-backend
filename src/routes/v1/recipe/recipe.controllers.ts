@@ -1,5 +1,4 @@
 import fs from "fs";
-import { FastifyRequest, FastifyReply } from "fastify";
 import { getImageUrl } from "../../../utils/baseurl";
 
 export const createRecipe = async (request, reply) => {
@@ -42,10 +41,8 @@ export const createRecipe = async (request, reply) => {
       });
     }
 
-    // Validate budget type
-    const validBudgetTypes = ["High", "Medium", "Low"];
-    if (!validBudgetTypes.includes(budget)) {
-      if (request.file?.path) removeFile(request.file.path);
+    if (!["High", "Medium", "Low"].includes(budget)) {
+      request.file?.path && removeFile(request.file.path);
       return reply.status(400).send({
         success: false,
         message: "Budget must be one of: High, Medium, Low",
@@ -92,5 +89,102 @@ export const createRecipe = async (request, reply) => {
     return reply
       .status(500)
       .send({ success: false, error: error, message: "Internal Server Error" });
+  }
+};
+
+export const updateRecipe = async (request, reply) => {
+  const removeFile = (filePath: string) => {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  };
+
+  try {
+    const { id } = request.params;
+    const prisma = request.server.prisma;
+
+    // Check if recipe exists
+    const existingRecipe = await prisma.recipe.findUnique({ where: { id } });
+    if (!existingRecipe) {
+      request.file?.path && removeFile(request.file.path);
+      return reply
+        .status(404)
+        .send({ success: false, message: "Recipe not found" });
+    }
+
+    const {
+      name,
+      minCookingTime,
+      maxCookingTime,
+      calories,
+      recipeType,
+      budget,
+      categories,
+      dietaryPreference,
+      description,
+    } = request.body;
+
+    if (budget && !["High", "Medium", "Low"].includes(budget)) {
+      request.file?.path && removeFile(request.file.path);
+      return reply
+        .status(400)
+        .send({ success: false, message: "Invalid budget value" });
+    }
+
+    // Build update data
+    const updateData = {
+      name,
+      recipeType,
+      categories,
+      dietaryPreference,
+      description,
+      budget,
+      minCookingTime: minCookingTime && parseInt(minCookingTime),
+      maxCookingTime: maxCookingTime && parseInt(maxCookingTime),
+      calories: calories && parseInt(calories),
+      image: request.file?.filename,
+    };
+
+    Object.keys(updateData).forEach(
+      (key) => updateData[key] === undefined && delete updateData[key]
+    );
+
+    if (request.file && existingRecipe.image)
+      removeFile(`uploads/${existingRecipe.image}`);
+    if (Object.keys(updateData).length === 0) {
+      request.file?.path && removeFile(request.file.path);
+      return reply
+        .status(400)
+        .send({ success: false, message: "No fields to update" });
+    }
+
+    const updatedRecipe = await prisma.recipe.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return reply.status(200).send({
+      success: true,
+      message: "Recipe updated successfully",
+      data: {
+        ...updatedRecipe,
+        image: updatedRecipe.image ? getImageUrl(updatedRecipe.image) : null,
+      },
+    });
+  } catch (error) {
+    request.file?.path && removeFile(request.file.path);
+    request.log.error(error);
+
+    if (error.code === "P2025") {
+      return reply
+        .status(404)
+        .send({ success: false, message: "Recipe not found" });
+    }
+
+    return reply.status(500).send({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
   }
 };
