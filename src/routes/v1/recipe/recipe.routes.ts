@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { createRecipe, updateRecipe } from "./recipe.controllers";
+import { createRecipe, deleteRecipe, updateRecipe } from "./recipe.controllers";
 import { upload } from "../../../config/storage.config";
 import { verifyUser } from "../../../middleware/auth.middleware";
 
@@ -18,6 +18,14 @@ const authRoutes = (fastify: FastifyInstance) => {
       preHandler: [verifyUser("admin"), upload.single("image")],
     },
     updateRecipe
+  );
+
+    fastify.delete(
+    "/delete/:id",
+    {
+      preHandler: [verifyUser("admin")],
+    },
+    deleteRecipe
   );
 };
 

@@ -1,13 +1,8 @@
 import fs from "fs";
 import { getImageUrl } from "../../../utils/baseurl";
+import { FileService } from "../../../utils/fileService";
 
 export const createRecipe = async (request, reply) => {
-  const removeFile = (filePath: string) => {
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-  };
-
   try {
     const {
       name,
@@ -34,7 +29,7 @@ export const createRecipe = async (request, reply) => {
     ].find((field) => !request.body[field]);
 
     if (missingField) {
-      if (request.file?.path) removeFile(request.file.path);
+      request.file?.path && FileService.removeFileByPath(request.file.path);
       return reply.status(400).send({
         success: false,
         message: `${missingField} is required!`,
@@ -42,7 +37,7 @@ export const createRecipe = async (request, reply) => {
     }
 
     if (!["High", "Medium", "Low"].includes(budget)) {
-      request.file?.path && removeFile(request.file.path);
+      request.file?.path && FileService.removeFile(request.file.path);
       return reply.status(400).send({
         success: false,
         message: "Budget must be one of: High, Medium, Low",
@@ -84,7 +79,7 @@ export const createRecipe = async (request, reply) => {
       },
     });
   } catch (error) {
-    if (request.file?.path) removeFile(request.file.path);
+    if (request.file?.path) FileService.removeFile(request.file.path);
     request.log.error(error);
     return reply
       .status(500)
@@ -93,20 +88,13 @@ export const createRecipe = async (request, reply) => {
 };
 
 export const updateRecipe = async (request, reply) => {
-  const removeFile = (filePath: string) => {
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-  };
-
   try {
     const { id } = request.params;
     const prisma = request.server.prisma;
 
-    // Check if recipe exists
     const existingRecipe = await prisma.recipe.findUnique({ where: { id } });
     if (!existingRecipe) {
-      request.file?.path && removeFile(request.file.path);
+      request.file?.path && FileService.removeFile(request.file.path);
       return reply
         .status(404)
         .send({ success: false, message: "Recipe not found" });
@@ -125,13 +113,12 @@ export const updateRecipe = async (request, reply) => {
     } = request.body;
 
     if (budget && !["High", "Medium", "Low"].includes(budget)) {
-      request.file?.path && removeFile(request.file.path);
+      request.file?.path && FileService.removeFile(request.file.path);
       return reply
         .status(400)
         .send({ success: false, message: "Invalid budget value" });
     }
 
-    // Build update data
     const updateData = {
       name,
       recipeType,
@@ -150,9 +137,9 @@ export const updateRecipe = async (request, reply) => {
     );
 
     if (request.file && existingRecipe.image)
-      removeFile(`uploads/${existingRecipe.image}`);
+      FileService.removeFile(existingRecipe.image);
     if (Object.keys(updateData).length === 0) {
-      request.file?.path && removeFile(request.file.path);
+      request.file?.path && FileService.removeFile(request.file.path);
       return reply
         .status(400)
         .send({ success: false, message: "No fields to update" });
@@ -172,13 +159,59 @@ export const updateRecipe = async (request, reply) => {
       },
     });
   } catch (error) {
-    request.file?.path && removeFile(request.file.path);
+    request.file?.path && FileService.removeFile(request.file.path);
     request.log.error(error);
 
     if (error.code === "P2025") {
       return reply
         .status(404)
         .send({ success: false, message: "Recipe not found" });
+    }
+
+    return reply.status(500).send({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+export const deleteRecipe = async (request, reply) => {
+  try {
+    const { id } = request.params;
+    const prisma = request.server.prisma;
+
+    const existingRecipe = await prisma.recipe.findUnique({
+      where: { id },
+    });
+
+    if (!existingRecipe) {
+      return reply.status(404).send({
+        success: false,
+        message: "Recipe not found",
+      });
+    }
+
+    if (existingRecipe.image) {
+      FileService.removeFile(existingRecipe.image);
+    }
+
+    await prisma.recipe.delete({
+      where: { id },
+    });
+
+    return reply.status(200).send({
+      success: true,
+      message: "Recipe deleted successfully",
+    });
+  } catch (error) {
+    request.log.error(error);
+
+    if (error.code === "P2025") {
+      return reply.status(404).send({
+        success: false,
+        message: "Recipe not found",
+      });
     }
 
     return reply.status(500).send({
