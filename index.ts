@@ -3,7 +3,7 @@ import app from "./app"
 
 async function start() {
   try {
-    const port = Number(process.env.PORT) || 8000
+    const port = Number(process.env.PORT) || 8001
     await app.listen({ port, host: "0.0.0.0" })
     console.log(`Server running at http://localhost:${port}`)
   } catch (err) {

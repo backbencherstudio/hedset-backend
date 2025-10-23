@@ -149,14 +149,6 @@ export const registerVerifyOtp = async (request, reply) => {
       },
     });
 
-    // const chatRoom = await prisma.chatRoom.create({
-    //   data: {
-    //     userId: newUser.id,
-    //   },
-    // });
-
-    // console.log("roome :", chatRoom);
-
     await redis.del(`register-verify-otp:${email}`);
 
     const token = generateJwtToken({
@@ -264,7 +256,7 @@ export const googleAuth = async (request, reply) => {
       const userResponse = {
         ...existingUser,
         avatar: existingUser.avatar
-          ? getImageUrl(`/uploads/${existingUser.avatar}`)
+          ? getImageUrl(existingUser.avatar)
           : null,
       };
 
@@ -1063,19 +1055,6 @@ export const updateUser = async (request, reply) => {
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: updateData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        timezone: true,
-        dateOfBirth: true,
-        gender: true,
-        avatar: true,
-        lifestyle: true,
-        createdAt: true,
-        updatedAt: true,
-      },
     });
 
     // Return success
@@ -1085,7 +1064,7 @@ export const updateUser = async (request, reply) => {
       data: {
         ...updatedUser,
         avatar: updatedUser.avatar
-          ? getImageUrl(`/uploads/${updatedUser.avatar}`)
+          ? getImageUrl(updatedUser.avatar)
           : null,
       },
     });
@@ -1125,7 +1104,7 @@ export const getUserProfile = async (request, reply) => {
       message: "User profile fetched successfully",
       data: {
         ...userData,
-        avatar: user.avatar ? getImageUrl(`/uploads/${user.avatar}`) : null,
+        avatar: user.avatar ? getImageUrl(user.avatar) : null,
       },
     });
   } catch (error) {

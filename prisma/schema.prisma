@@ -59,3 +59,30 @@ enum Lifestyle {
   student
   senior
 }
+
+model Recipe {
+  id             String  @id @default(cuid())
+  image          String? // optional image URL/path
+  name           String
+  minCookingTime Int // minimum cooking time in minutes
+  maxCookingTime Int // maximum cooking time in minutes
+  calories       Int
+
+  categories String
+  budget     budgetType
+  recipeType String
+
+  dietaryPreference String
+  description       String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("recipe")
+}
+
+enum budgetType {
+  High
+  Medium
+  Low
+}
