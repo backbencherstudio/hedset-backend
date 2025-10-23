@@ -7,7 +7,7 @@ const authRoutes = (fastify: FastifyInstance) => {
   fastify.post(
     "/create",
     {
-      preHandler: [verifyUser("user", "admin"), upload.single("avatar")],
+      preHandler: [verifyUser("admin"), upload.single("image")],
     },
     createRecipe
   );
