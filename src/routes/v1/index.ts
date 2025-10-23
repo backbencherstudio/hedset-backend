@@ -1,11 +1,13 @@
 import { FastifyInstance } from "fastify";
 import auth from "./auth/auth.routes";
 import recipe from "./recipe/recipe.routes";
+import users from "./users/users.routes"
 
 async function routesV1(fastify: FastifyInstance) {
   const moduleRoutes = [
     { path: "/auth", route: auth },
     { path: "/recipe", route: recipe },
+    {path: "/users",  route: users}
   ];
 
   moduleRoutes.forEach(({ path, route }) => {
