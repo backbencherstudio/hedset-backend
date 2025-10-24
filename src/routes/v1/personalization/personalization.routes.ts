@@ -2,8 +2,7 @@ import { FastifyInstance } from "fastify";
 
 import { upload } from "../../../config/storage.config";
 import { verifyUser } from "../../../middleware/auth.middleware";
-import { createPersonalization } from "./personalization.controllers";
-
+import { checkOk, createPersonalization } from "./personalization.controllers";
 
 const usersRoutes = (fastify: FastifyInstance) => {
   fastify.post(
@@ -12,6 +11,14 @@ const usersRoutes = (fastify: FastifyInstance) => {
       preHandler: [verifyUser("user")],
     },
     createPersonalization
+  );
+
+  fastify.get(
+    "/",
+    {
+      preHandler: [verifyUser("user")],
+    },
+    checkOk
   );
 };
 

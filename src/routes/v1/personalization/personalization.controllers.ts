@@ -9,9 +9,10 @@ export const createPersonalization = async (request, reply) => {
       recipeType, // optional or "other"
     } = request.body;
 
-    const parsedCookingTime = Number(cookingTime);
+    let parsedCookingTime = null;
 
     if (cookingTime) {
+      parsedCookingTime = Number(cookingTime);
       if (
         cookingTime === undefined ||
         cookingTime === null ||
@@ -66,13 +67,23 @@ export const createPersonalization = async (request, reply) => {
 
     const redisKey = `personalization:${userId}`;
 
-    await redis.hset(redisKey, {
+    await redis.del(redisKey);
+
+    const dataToStore = {
       targetLifestyle,
       cookingTime: parsedCookingTime,
       budget,
       dietaryPreference,
       recipeType,
-    });
+    };
+
+    Object.keys(dataToStore).forEach((key) =>
+      dataToStore[key] == null || dataToStore[key] === ""
+        ? delete dataToStore[key]
+        : null
+    );
+
+    await redis.hset(redisKey, dataToStore);
 
     return reply.status(200).send({
       success: true,
@@ -84,6 +95,41 @@ export const createPersonalization = async (request, reply) => {
         dietaryPreference,
         recipeType,
       },
+    });
+  } catch (error) {
+    request.log.error(error);
+    return reply.status(500).send({
+      success: false,
+      error: error.message,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+export const checkOk = async (request, reply) => {
+  try {
+    const userId = request.user?.id;
+    const redis = request.server.redis;
+
+    const redisKey = `personalization:${userId}`;
+
+    const data = await redis.hgetall(redisKey);
+
+    console.log("==============");
+    console.log(data);
+    console.log("==========================");
+
+    if (!data || Object.keys(data).length === 0) {
+      return reply.status(404).send({
+        success: false,
+        message: "No personalization data found",
+      });
+    }
+
+    return reply.status(200).send({
+      success: true,
+      message: "Personalization data retrieved successfully!",
+      data,
     });
   } catch (error) {
     request.log.error(error);
