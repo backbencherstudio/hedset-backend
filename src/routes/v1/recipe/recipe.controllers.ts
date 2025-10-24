@@ -318,3 +318,131 @@ export const getAllRecipes = async (request, reply) => {
     });
   }
 };
+
+export const getPersonalizedRecipe = async (request, reply) => {
+  try {
+    const userId = request.user?.id;
+    const prisma = request.server.prisma;
+    const redis = request.server.redis;
+
+    if (!userId) {
+      return reply.status(401).send({
+        success: false,
+        message: "Unauthorized user",
+      });
+    }
+
+    const redisKey = `personalization:${userId}`;
+    const personalizationData = await redis.hgetall(redisKey);
+
+    if (!Object.keys(personalizationData || {}).length) {
+      return reply.status(404).send({
+        success: false,
+        message: "No personalization data found",
+      });
+    }
+
+    const filters: any = {};
+
+    if (personalizationData.targetLifestyle) {
+      filters.targetLifestyle = personalizationData.targetLifestyle;
+    }
+
+    if (personalizationData.budget) {
+      filters.budget = personalizationData.budget;
+    }
+
+    if (personalizationData.dietaryPreference) {
+      filters.dietaryPreference = personalizationData.dietaryPreference;
+    }
+
+    if (personalizationData.recipeType) {
+      filters.recipeType = personalizationData.recipeType;
+    }
+
+    if (personalizationData.cookingTime) {
+      const cookTime = Number(personalizationData.cookingTime);
+      if (!isNaN(cookTime)) {
+        filters.AND = [
+          { minCookingTime: { lte: cookTime + 10 } },
+          { maxCookingTime: { gte: cookTime - 10 } },
+        ];
+      }
+    }
+
+    let recipe = await prisma.recipe.findFirst({
+      where: filters,
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!recipe) {
+
+      if (personalizationData.targetLifestyle && personalizationData.budget) {
+        recipe = await prisma.recipe.findFirst({
+          where: {
+            targetLifestyle: personalizationData.targetLifestyle,
+            budget: personalizationData.budget,
+          },
+          orderBy: { createdAt: "desc" },
+        });
+      }
+
+      if (!recipe && personalizationData.targetLifestyle) {
+        recipe = await prisma.recipe.findFirst({
+          where: {
+            targetLifestyle: personalizationData.targetLifestyle,
+          },
+          orderBy: { createdAt: "desc" },
+        });
+      }
+
+      if (!recipe && personalizationData.budget) {
+        recipe = await prisma.recipe.findFirst({
+          where: {
+            budget: personalizationData.budget,
+          },
+          orderBy: { createdAt: "desc" },
+        });
+      }
+
+      if (!recipe && personalizationData.dietaryPreference) {
+        recipe = await prisma.recipe.findFirst({
+          where: {
+            dietaryPreference: personalizationData.dietaryPreference,
+          },
+          orderBy: { createdAt: "desc" },
+        });
+      }
+
+      if (!recipe) {
+        recipe = await prisma.recipe.findFirst({
+          orderBy: { createdAt: "desc" },
+        });
+      }
+    }
+
+    // Step 5: Return result
+    if (!recipe) {
+      return reply.status(404).send({
+        success: false,
+        message: "No recipes found at all.",
+      });
+    }
+
+    return reply.status(200).send({
+      success: true,
+      message: "Personalized recipe fetched successfully!",
+      data: {
+        ...recipe,
+        image: recipe.image ? getImageUrl(recipe.image) : null,
+      },
+    });
+  } catch (error) {
+    request.log.error(error);
+    return reply.status(500).send({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message || error,
+    });
+  }
+};
