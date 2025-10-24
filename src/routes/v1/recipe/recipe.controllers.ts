@@ -135,6 +135,7 @@ export const updateRecipe = async (request, reply) => {
       categories,
       dietaryPreference,
       description,
+      targetLifestyle,
     } = request.body;
 
     if (budget && !["High", "Medium", "Low"].includes(budget)) {
@@ -142,6 +143,14 @@ export const updateRecipe = async (request, reply) => {
       return reply
         .status(400)
         .send({ success: false, message: "Invalid budget value" });
+    }
+
+    if (targetLifestyle && !["senior", "student"].includes(targetLifestyle)) {
+      request.file?.path && FileService.removeFile(request.file.path);
+      return reply.status(400).send({
+        success: false,
+        message: "Lifestyle must be: senior, student",
+      });
     }
 
     const updateData = {
@@ -155,6 +164,7 @@ export const updateRecipe = async (request, reply) => {
       maxCookingTime: maxCookingTime && parseInt(maxCookingTime),
       calories: calories && parseInt(calories),
       image: request.file?.filename,
+      targetLifestyle,
     };
 
     Object.keys(updateData).forEach(
