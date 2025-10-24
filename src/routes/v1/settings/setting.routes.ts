@@ -4,7 +4,7 @@ import { upload } from "../../../config/storage.config";
 import { verifyUser } from "../../../middleware/auth.middleware";
 import { createSettings, getSettings } from "./setting.controllers";
 
-const usersRoutes = (fastify: FastifyInstance) => {
+const settingRoutes = (fastify: FastifyInstance) => {
   fastify.post(
     "/",
     {
@@ -13,7 +13,7 @@ const usersRoutes = (fastify: FastifyInstance) => {
     createSettings
   );
 
-    fastify.get(
+  fastify.get(
     "/",
     {
       preHandler: [verifyUser("admin", "user")],
@@ -22,4 +22,4 @@ const usersRoutes = (fastify: FastifyInstance) => {
   );
 };
 
-export default usersRoutes;
+export default settingRoutes;

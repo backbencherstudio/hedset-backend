@@ -4,7 +4,7 @@ import { upload } from "../../../config/storage.config";
 import { verifyUser } from "../../../middleware/auth.middleware";
 import { checkOk, createPersonalization } from "./personalization.controllers";
 
-const usersRoutes = (fastify: FastifyInstance) => {
+const personalizationRoutes = (fastify: FastifyInstance) => {
   fastify.post(
     "/",
     {
@@ -22,4 +22,4 @@ const usersRoutes = (fastify: FastifyInstance) => {
   );
 };
 
-export default usersRoutes;
+export default personalizationRoutes;
