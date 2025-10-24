@@ -25,7 +25,6 @@ model User {
   timezone    String?
   dateOfBirth String?
   gender      String?
-  lifestyle   Lifestyle?
 
   //parmitions
   notificationAccess Boolean @default(true)
@@ -55,18 +54,14 @@ enum userStatus {
   admin
 }
 
-enum Lifestyle {
-  student
-  senior
-}
-
 model Recipe {
-  id             String  @id @default(cuid())
-  image          String? // optional image URL/path
-  name           String
-  minCookingTime Int // minimum cooking time in minutes
-  maxCookingTime Int // maximum cooking time in minutes
-  calories       Int
+  id               String    @id @default(cuid())
+  image            String? // optional image URL/path
+  name             String
+  minCookingTime   Int // minimum cooking time in minutes
+  maxCookingTime   Int // maximum cooking time in minutes
+  calories         Int
+  targetLifestyle Lifestyle
 
   categories String
   budget     budgetType
@@ -79,6 +74,11 @@ model Recipe {
   updatedAt DateTime @updatedAt
 
   @@map("recipe")
+}
+
+enum Lifestyle {
+  student
+  senior
 }
 
 enum budgetType {

@@ -14,9 +14,10 @@ export const createRecipe = async (request, reply) => {
       categories,
       dietaryPreference,
       description,
+      targetLifestyle,
     } = request.body;
 
-    const missingField = [
+    const requiredFields = [
       "name",
       "minCookingTime",
       "maxCookingTime",
@@ -26,8 +27,10 @@ export const createRecipe = async (request, reply) => {
       "categories",
       "dietaryPreference",
       "description",
-    ].find((field) => !request.body[field]);
+      "targetLifestyle",
+    ];
 
+    const missingField = requiredFields.find((field) => !request.body[field]);
     if (missingField) {
       request.file?.path && FileService.removeFileByPath(request.file.path);
       return reply.status(400).send({
@@ -44,6 +47,14 @@ export const createRecipe = async (request, reply) => {
       });
     }
 
+    if (!["senior", "student"].includes(targetLifestyle)) {
+      request.file?.path && FileService.removeFile(request.file.path);
+      return reply.status(400).send({
+        success: false,
+        message: "Lifestyle must be: senior, student",
+      });
+    }
+
     if (!request.file) {
       return reply.status(400).send({
         success: false,
@@ -52,38 +63,52 @@ export const createRecipe = async (request, reply) => {
     }
 
     const prisma = request.server.prisma;
-    const redis = request.server.redis;
 
-    const createRecipe = await prisma.recipe.create({
+    const minTime = parseInt(minCookingTime);
+    const maxTime = parseInt(maxCookingTime);
+    const cal = parseInt(calories);
+
+    if (isNaN(minTime) || isNaN(maxTime) || isNaN(cal)) {
+      request.file?.path && FileService.removeFile(request.file.path);
+      return reply.status(400).send({
+        success: false,
+        message: "Cooking times and calories must be valid numbers.",
+      });
+    }
+
+    const newRecipe = await prisma.recipe.create({
       data: {
         name,
-        minCookingTime: parseInt(minCookingTime),
-        maxCookingTime: parseInt(maxCookingTime),
-        calories: parseInt(calories),
+        minCookingTime: minTime,
+        maxCookingTime: maxTime,
+        calories: cal,
         recipeType,
         budget,
+        categories,
         dietaryPreference,
         description,
+        targetLifestyle,
         image: request.file.filename,
-        categories,
       },
     });
 
     return reply.status(201).send({
       success: true,
       message: "Recipe Created Successfully!",
-
       data: {
-        ...createRecipe,
-        image: createRecipe.image ? getImageUrl(createRecipe.image) : null,
+        ...newRecipe,
+        image: newRecipe.image ? getImageUrl(newRecipe.image) : null,
       },
     });
   } catch (error) {
     if (request.file?.path) FileService.removeFile(request.file.path);
     request.log.error(error);
-    return reply
-      .status(500)
-      .send({ success: false, error: error, message: "Internal Server Error" });
+
+    return reply.status(500).send({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message || error,
+    });
   }
 };
 
@@ -225,20 +250,20 @@ export const deleteRecipe = async (request, reply) => {
 export const getAllRecipes = async (request, reply) => {
   try {
     const prisma = request.server.prisma;
-    
+
     const page = parseInt(request.query.page as string) || 1;
     const limit = parseInt(request.query.limit as string) || 10;
-    const search = (request.query.search as string) || '';
+    const search = (request.query.search as string) || "";
     const skip = (page - 1) * limit;
 
     const whereCondition: any = {};
     if (search) {
       whereCondition.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { recipeType: { contains: search, mode: 'insensitive' } },
-        { categories: { contains: search, mode: 'insensitive' } },
-        { dietaryPreference: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
+        { name: { contains: search, mode: "insensitive" } },
+        { recipeType: { contains: search, mode: "insensitive" } },
+        { categories: { contains: search, mode: "insensitive" } },
+        { dietaryPreference: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
       ];
     }
 
@@ -248,13 +273,13 @@ export const getAllRecipes = async (request, reply) => {
         where: whereCondition,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' }
-      })
+        orderBy: { createdAt: "desc" },
+      }),
     ]);
 
-    const formattedRecipes = recipes.map(recipe => ({
+    const formattedRecipes = recipes.map((recipe) => ({
       ...recipe,
-      image: recipe.image ? getImageUrl(recipe.image) : null
+      image: recipe.image ? getImageUrl(recipe.image) : null,
     }));
 
     const totalPages = Math.ceil(totalItems / limit);
@@ -271,15 +296,15 @@ export const getAllRecipes = async (request, reply) => {
         currentPage: page,
         itemsPerPage: limit,
         hasNextPage,
-        hasPrevPage
-      }
+        hasPrevPage,
+      },
     });
   } catch (error) {
     request.log.error(error);
-    return reply.status(500).send({ 
-      success: false, 
-      error: error, 
-      message: "Internal Server Error" 
+    return reply.status(500).send({
+      success: false,
+      error: error,
+      message: "Internal Server Error",
     });
   }
 };

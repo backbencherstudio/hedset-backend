@@ -1007,7 +1007,6 @@ export const updateUser = async (request, reply) => {
       "timezone",
       "dateOfBirth",
       "gender",
-      "lifestyle",
     ];
 
     const updateData: Record<string, any> = {};
