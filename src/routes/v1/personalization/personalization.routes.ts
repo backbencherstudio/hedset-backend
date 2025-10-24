@@ -13,7 +13,6 @@ const usersRoutes = (fastify: FastifyInstance) => {
     },
     createPersonalization
   );
-
 };
 
 export default usersRoutes;
