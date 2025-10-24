@@ -221,3 +221,65 @@ export const deleteRecipe = async (request, reply) => {
     });
   }
 };
+
+export const getAllRecipes = async (request, reply) => {
+  try {
+    const prisma = request.server.prisma;
+    
+    const page = parseInt(request.query.page as string) || 1;
+    const limit = parseInt(request.query.limit as string) || 10;
+    const search = (request.query.search as string) || '';
+    const skip = (page - 1) * limit;
+
+    const whereCondition: any = {};
+    if (search) {
+      whereCondition.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { recipeType: { contains: search, mode: 'insensitive' } },
+        { categories: { contains: search, mode: 'insensitive' } },
+        { dietaryPreference: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [totalItems, recipes] = await Promise.all([
+      prisma.recipe.count({ where: whereCondition }),
+      prisma.recipe.findMany({
+        where: whereCondition,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' }
+      })
+    ]);
+
+    const formattedRecipes = recipes.map(recipe => ({
+      ...recipe,
+      image: recipe.image ? getImageUrl(recipe.image) : null
+    }));
+
+    const totalPages = Math.ceil(totalItems / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    return reply.status(200).send({
+      success: true,
+      message: "Recipes fetched successfully",
+      data: formattedRecipes,
+      pagination: {
+        totalItems,
+        totalPages,
+        currentPage: page,
+        itemsPerPage: limit,
+        hasNextPage,
+        hasPrevPage
+      }
+    });
+  } catch (error) {
+    request.log.error(error);
+    return reply.status(500).send({ 
+      success: false, 
+      error: error, 
+      message: "Internal Server Error" 
+    });
+  }
+};

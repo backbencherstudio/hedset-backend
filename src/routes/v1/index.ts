@@ -2,12 +2,16 @@ import { FastifyInstance } from "fastify";
 import auth from "./auth/auth.routes";
 import recipe from "./recipe/recipe.routes";
 import users from "./users/users.routes"
+import setting from "./settings/setting.routes"
+
+import path from "path";
 
 async function routesV1(fastify: FastifyInstance) {
   const moduleRoutes = [
     { path: "/auth", route: auth },
     { path: "/recipe", route: recipe },
-    {path: "/users",  route: users}
+    {path: "/users",  route: users},
+    {path: "/setting", route: setting}
   ];
 
   moduleRoutes.forEach(({ path, route }) => {

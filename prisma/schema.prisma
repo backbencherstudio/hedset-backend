@@ -86,3 +86,16 @@ enum budgetType {
   Medium
   Low
 }
+
+model Setting {
+  id String @id @default(cuid())
+
+  privacyPolicy  String?
+  termsCondition String?
+  aboutUs        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("setting")
+}

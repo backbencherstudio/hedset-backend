@@ -14,7 +14,7 @@ import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
 import { authenticator } from "otplib";
 import { uploadsDir } from "../../../config/storage.config";
-import { Lifestyle } from "@prisma/client";
+ 
 
 const downloadAndSaveImage = async (imageUrl: string): Promise<string> => {
   try {
@@ -1030,7 +1030,6 @@ export const updateUser = async (request, reply) => {
       });
     }
 
-    // Handle avatar update
     if (request.file) {
       const currentUser = await prisma.user.findUnique({
         where: { id: userId },
@@ -1051,13 +1050,11 @@ export const updateUser = async (request, reply) => {
       });
     }
 
-    // Update user in the database
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: updateData,
     });
 
-    // Return success
     return reply.code(200).send({
       success: true,
       message: "User profile updated successfully",
