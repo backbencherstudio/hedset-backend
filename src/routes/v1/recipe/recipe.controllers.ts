@@ -332,9 +332,12 @@ export const getPersonalizedRecipe = async (request, reply) => {
       });
     }
 
-    const redisKey = `personalization:${userId}`;
-    const personalizationData = await redis.hgetall(redisKey);
+    // Redis keys
+    const personalizationKey = `personalization:${userId}`;
+    const shownRecipesKey = `shownRecipes:${userId}`;
 
+    // 🔹 Step 1: Get personalization data
+    const personalizationData = await redis.hgetall(personalizationKey);
     if (!Object.keys(personalizationData || {}).length) {
       return reply.status(404).send({
         success: false,
@@ -342,7 +345,13 @@ export const getPersonalizedRecipe = async (request, reply) => {
       });
     }
 
-    const filters: any = {};
+    // 🔹 Step 2: Get list of already shown recipe IDs
+    const shownRecipeIds = await redis.smembers(shownRecipesKey);
+
+    // 🔹 Step 3: Build initial filters
+    const filters: any = {
+      NOT: shownRecipeIds.length ? { id: { in: shownRecipeIds } } : undefined,
+    };
 
     if (personalizationData.targetLifestyle) {
       filters.targetLifestyle = personalizationData.targetLifestyle;
@@ -370,65 +379,64 @@ export const getPersonalizedRecipe = async (request, reply) => {
       }
     }
 
+    // 🔹 Step 4: Find recipe (not yet shown)
     let recipe = await prisma.recipe.findFirst({
       where: filters,
       orderBy: { createdAt: "desc" },
     });
 
+    // 🔹 Step 5: Progressive fallback logic
     if (!recipe) {
+      const fallbackQueries = [
+        // Step 1: lifestyle + budget
+        {
+          targetLifestyle: personalizationData.targetLifestyle,
+          budget: personalizationData.budget,
+        },
+        // Step 2: lifestyle only
+        { targetLifestyle: personalizationData.targetLifestyle },
+        // Step 3: budget only
+        { budget: personalizationData.budget },
+        // Step 4: dietary preference only
+        { dietaryPreference: personalizationData.dietaryPreference },
+        // Step 5: any recipe not shown
+        {},
+      ];
 
-      if (personalizationData.targetLifestyle && personalizationData.budget) {
+      for (const fallbackFilter of fallbackQueries) {
         recipe = await prisma.recipe.findFirst({
           where: {
-            targetLifestyle: personalizationData.targetLifestyle,
-            budget: personalizationData.budget,
+            ...fallbackFilter,
+            NOT: shownRecipeIds.length
+              ? { id: { in: shownRecipeIds } }
+              : undefined,
           },
           orderBy: { createdAt: "desc" },
         });
-      }
-
-      if (!recipe && personalizationData.targetLifestyle) {
-        recipe = await prisma.recipe.findFirst({
-          where: {
-            targetLifestyle: personalizationData.targetLifestyle,
-          },
-          orderBy: { createdAt: "desc" },
-        });
-      }
-
-      if (!recipe && personalizationData.budget) {
-        recipe = await prisma.recipe.findFirst({
-          where: {
-            budget: personalizationData.budget,
-          },
-          orderBy: { createdAt: "desc" },
-        });
-      }
-
-      if (!recipe && personalizationData.dietaryPreference) {
-        recipe = await prisma.recipe.findFirst({
-          where: {
-            dietaryPreference: personalizationData.dietaryPreference,
-          },
-          orderBy: { createdAt: "desc" },
-        });
-      }
-
-      if (!recipe) {
-        recipe = await prisma.recipe.findFirst({
-          orderBy: { createdAt: "desc" },
-        });
+        if (recipe) break;
       }
     }
 
-    // Step 5: Return result
-    if (!recipe) {
-      return reply.status(404).send({
-        success: false,
-        message: "No recipes found at all.",
+    // 🔹 Step 6: If still not found — reset shown list and retry once
+    if (!recipe && shownRecipeIds.length > 0) {
+      await redis.del(shownRecipesKey); // Clear seen list
+      recipe = await prisma.recipe.findFirst({
+        orderBy: { createdAt: "desc" },
       });
     }
 
+    if (!recipe) {
+      return reply.status(404).send({
+        success: false,
+        message: "No recipes available at this time.",
+      });
+    }
+
+    // 🔹 Step 7: Save this recipe ID in Redis set (to mark as shown)
+    await redis.sadd(shownRecipesKey, recipe.id);
+    await redis.expire(shownRecipesKey, 24 * 60 * 60); // expires in 24h (optional)
+
+    // 🔹 Step 8: Return the found recipe
     return reply.status(200).send({
       success: true,
       message: "Personalized recipe fetched successfully!",
