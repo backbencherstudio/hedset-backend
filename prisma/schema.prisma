@@ -41,9 +41,13 @@ model User {
 
   type userStatus @default(user)
 
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  FavoriteRecipe FavoriteRecipe[]
+  isSubscriber Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  favoriteRecipe FavoriteRecipe[]
+  transaction    Transaction[]
 
   @@index([name])
   @@index([email])
@@ -132,8 +136,37 @@ model SubscriptionPackage {
   stripeProductId String?
   stripePriceId   String?
 
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  transaction Transaction[]
+
+  @@map("subscriptionPackage")
+}
+
+model Transaction {
+  id String @id @default(cuid())
+
+  // Transaction details
+  transactionId String  @unique // Unique ID from payment gateway
+  amount        Float // Transaction amount
+  currency      String  @default("usd")
+  paymentMethod String?
+  accountNumber String? // Masked account number, e.g., 424242424****
+
+  // Subscription dates
+  startDate   DateTime
+  endDate     DateTime
+  autoRenewal Boolean  @default(true)
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  subscriptionPackageId String
+  subscriptionPackage   SubscriptionPackage @relation(fields: [subscriptionPackageId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("subscriptionPackage")
+  @@map("transaction")
 }

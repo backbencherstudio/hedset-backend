@@ -383,7 +383,6 @@ export const deleteStripeProducts = async (
       });
     }
 
-    // Fetch existing product
     const existingProduct = await prisma.subscriptionPackage.findUnique({
       where: { id },
     });
@@ -395,14 +394,12 @@ export const deleteStripeProducts = async (
       });
     }
 
-    // Delete product in Stripe
     if (existingProduct.stripeProductId) {
       await stripe.products.update(existingProduct.stripeProductId, {
         active: false,
       });
     }
 
-    // Delete product in your database
     await prisma.subscriptionPackage.delete({
       where: { id },
     });
