@@ -146,12 +146,15 @@ model SubscriptionPackage {
 model Transaction {
   id String @id @default(cuid())
 
-  // Transaction details
-  transactionId String  @unique // Unique ID from payment gateway
-  amount        Float // Transaction amount
+  // Unique ID from payment gateway
+  transactionId String @unique
+
+  amount        Float
   currency      String  @default("usd")
   paymentMethod String?
-  accountNumber String? // Masked account number, e.g., 424242424****
+
+  //424242424****
+  accountNumber String?
 
   // Subscription dates
   startDate   DateTime
