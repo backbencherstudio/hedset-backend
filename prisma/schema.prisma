@@ -41,8 +41,9 @@ model User {
 
   type userStatus @default(user)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  FavoriteRecipe FavoriteRecipe[]
 
   @@index([name])
   @@index([email])
@@ -55,12 +56,12 @@ enum userStatus {
 }
 
 model Recipe {
-  id               String    @id @default(cuid())
-  image            String? // optional image URL/path
-  name             String
-  minCookingTime   Int // minimum cooking time in minutes
-  maxCookingTime   Int // maximum cooking time in minutes
-  calories         Int
+  id              String    @id @default(cuid())
+  image           String? // optional image URL/path
+  name            String
+  minCookingTime  Int // minimum cooking time in minutes
+  maxCookingTime  Int // maximum cooking time in minutes
+  calories        Int
   targetLifestyle Lifestyle
 
   categories String
@@ -70,10 +71,28 @@ model Recipe {
   dietaryPreference String
   description       String
 
+  // Relations
+  favoriteRecipes FavoriteRecipe[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("recipe")
+}
+
+model FavoriteRecipe {
+  id        String   @id @default(cuid())
+  userId    String
+  recipeId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, recipeId])
+  @@map("favorite_recipe")
 }
 
 enum Lifestyle {
@@ -98,4 +117,23 @@ model Setting {
   updatedAt DateTime @updatedAt
 
   @@map("setting")
+}
+
+model SubscriptionPackage {
+  id              String  @id @default(cuid())
+  name            String
+  description     String
+  amount          Float
+  currency        String  @default("usd")
+  duration        String? // Made optional with ?
+  interval        String // "day", "week", "month", "year"
+  interval_count  Int     @default(1)
+  isRecurring     Boolean @default(true)
+  stripeProductId String?
+  stripePriceId   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("subscriptionPackage")
 }

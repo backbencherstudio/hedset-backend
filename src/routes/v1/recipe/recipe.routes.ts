@@ -9,7 +9,7 @@ import {
 import { upload } from "../../../config/storage.config";
 import { verifyUser } from "../../../middleware/auth.middleware";
 
-const authRoutes = (fastify: FastifyInstance) => {
+const recipeRoutes = (fastify: FastifyInstance) => {
   fastify.post(
     "/create",
     {
@@ -49,4 +49,4 @@ const authRoutes = (fastify: FastifyInstance) => {
   );
 };
 
-export default authRoutes;
+export default recipeRoutes;
