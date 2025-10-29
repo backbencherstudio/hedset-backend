@@ -1,8 +1,6 @@
 import path from "path";
 import Stripe from "stripe";
 import { FastifyRequest, FastifyReply } from "fastify";
-import { FileService } from "../../../utils/fileService";
-import { getImageUrl } from "../../../utils/baseurl";
 
 const stripe = new Stripe(
   "sk_test_51QuTWKClJBhr3sfikQjjaxPgDjsndVS0WlfusMAoxLzAsEOC7NYTKzGTSVkngmlKmSuNa6HGa0wRVLit80kVDRpa004vfKxrUO"

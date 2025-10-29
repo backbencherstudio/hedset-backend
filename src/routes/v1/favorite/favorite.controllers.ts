@@ -66,12 +66,10 @@ export const getAllFavorite = async (request, reply) => {
     const userId = request.user.id;
     const prisma = request.server.prisma;
 
-    // Get pagination parameters from query
     const page = parseInt(request.query.page) || 1;
     const limit = parseInt(request.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Get total count of user's favorites
     const totalItems = await prisma.favoriteRecipe.count({
       where: {
         userId: userId,

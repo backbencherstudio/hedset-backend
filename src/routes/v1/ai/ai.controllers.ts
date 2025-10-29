@@ -19,7 +19,7 @@ export const askedQuestions = async (request, reply) => {
     }
 
     const response = await client.responses.create({
-      model:"meta-llama/llama-4-maverick-17b-128e-instruct",
+      model: "meta-llama/llama-4-maverick-17b-128e-instruct",
       temperature: 0.7,
       input: [
         {

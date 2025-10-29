@@ -146,19 +146,19 @@ model SubscriptionPackage {
 model Transaction {
   id String @id @default(cuid())
 
-  // Unique ID from payment gateway
-  transactionId String @unique
+  // Stripe session and payment details
+  stripeSessionId       String? @unique
+  stripePaymentIntentId String?
 
   amount        Float
   currency      String  @default("usd")
   paymentMethod String?
 
+  status        String  @default("pending")
   //424242424****
   accountNumber String?
 
   // Subscription dates
-  startDate   DateTime
-  endDate     DateTime
   autoRenewal Boolean  @default(true)
 
   // Relations
