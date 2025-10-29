@@ -6,6 +6,7 @@ import setting from "./settings/setting.routes";
 import personalization from "./personalization/personalization.routes";
 import subscriptionRoutes from "./subscription/subscription.routes";
 import favoriteRoutes from "./favorite/favorite.routes";
+import aiRoutes from "./ai/ai.routes";
 
 async function routesV1(fastify: FastifyInstance) {
   const moduleRoutes = [
@@ -16,6 +17,7 @@ async function routesV1(fastify: FastifyInstance) {
     { path: "/personalization", route: personalization },
     { path: "/subscription", route: subscriptionRoutes },
     { path: "/favorite", route: favoriteRoutes },
+    { path: "/ai", route: aiRoutes },
   ];
 
   moduleRoutes.forEach(({ path, route }) => {
