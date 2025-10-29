@@ -455,6 +455,162 @@ export const getAllRecipes = async (request, reply) => {
 //   }
 // };
 
+//==========================================not include facurate==================
+
+// export const getPersonalizedRecipe = async (request, reply) => {
+//   try {
+//     const userId = request.user?.id;
+//     const prisma = request.server.prisma;
+//     const redis = request.server.redis;
+
+//     if (!userId) {
+//       return reply.status(401).send({
+//         success: false,
+//         message: "Unauthorized user",
+//       });
+//     }
+
+//     const user = await prisma.user.findUnique({
+//       where: { id: userId },
+//       select: { isSubscriber: true },
+//     });
+
+//     if (!user) {
+//       return reply.status(404).send({
+//         success: false,
+//         message: "User not found",
+//       });
+//     }
+
+//     if (!user.isSubscriber) {
+//       const today = new Date().toISOString().split("T")[0];
+//       const dailyKey = `recipe_limit:${userId}:${today}`;
+
+//       const currentCount = await redis.get(dailyKey);
+//       const count = currentCount ? parseInt(currentCount) : 0;
+
+//       if (count >= 5) {
+//         return reply.status(429).send({
+//           success: false,
+//           message: "Daily limit reached. Subscribe for unlimited access.",
+//         });
+//       }
+
+//       await redis.incr(dailyKey);
+//       await redis.expire(dailyKey, 24 * 60 * 60);
+//     }
+
+//     const personalizationKey = `personalization:${userId}`;
+//     const shownRecipesKey = `shownRecipes:${userId}`;
+
+//     const personalizationData = await redis.hgetall(personalizationKey);
+//     if (!Object.keys(personalizationData || {}).length) {
+//       return reply.status(404).send({
+//         success: false,
+//         message: "No personalization data found",
+//       });
+//     }
+
+//     const shownRecipeIds = await redis.smembers(shownRecipesKey);
+
+//     const filters: any = {
+//       NOT: shownRecipeIds.length ? { id: { in: shownRecipeIds } } : undefined,
+//     };
+
+//     if (personalizationData.targetLifestyle) {
+//       filters.targetLifestyle = personalizationData.targetLifestyle;
+//     }
+
+//     if (personalizationData.budget) {
+//       filters.budget = personalizationData.budget;
+//     }
+
+//     if (personalizationData.dietaryPreference) {
+//       filters.dietaryPreference = personalizationData.dietaryPreference;
+//     }
+
+//     if (personalizationData.recipeType) {
+//       filters.recipeType = personalizationData.recipeType;
+//     }
+
+//     if (personalizationData.cookingTime) {
+//       const cookTime = Number(personalizationData.cookingTime);
+//       if (!isNaN(cookTime)) {
+//         filters.AND = [
+//           { minCookingTime: { lte: cookTime + 10 } },
+//           { maxCookingTime: { gte: cookTime - 10 } },
+//         ];
+//       }
+//     }
+
+//     let recipe = await prisma.recipe.findFirst({
+//       where: filters,
+//       orderBy: { createdAt: "desc" },
+//     });
+
+//     if (!recipe) {
+//       const fallbackQueries = [
+//         {
+//           targetLifestyle: personalizationData.targetLifestyle,
+//           budget: personalizationData.budget,
+//         },
+//         { targetLifestyle: personalizationData.targetLifestyle },
+//         { budget: personalizationData.budget },
+//         { dietaryPreference: personalizationData.dietaryPreference },
+//         {},
+//       ];
+
+//       for (const fallbackFilter of fallbackQueries) {
+//         recipe = await prisma.recipe.findFirst({
+//           where: {
+//             ...fallbackFilter,
+//             NOT: shownRecipeIds.length
+//               ? { id: { in: shownRecipeIds } }
+//               : undefined,
+//           },
+//           orderBy: { createdAt: "desc" },
+//         });
+//         if (recipe) break;
+//       }
+//     }
+
+//     if (!recipe && shownRecipeIds.length > 0) {
+//       await redis.del(shownRecipesKey);
+//       recipe = await prisma.recipe.findFirst({
+//         orderBy: { createdAt: "desc" },
+//       });
+//     }
+
+//     if (!recipe) {
+//       return reply.status(404).send({
+//         success: false,
+//         message: "No recipes available at this time.",
+//       });
+//     }
+
+//     await redis.sadd(shownRecipesKey, recipe.id);
+//     await redis.expire(shownRecipesKey, 24 * 60 * 60);
+
+//     return reply.status(200).send({
+//       success: true,
+//       message: "Personalized recipe fetched successfully!",
+//       data: {
+//         ...recipe,
+//         image: recipe.image ? getImageUrl(recipe.image) : null,
+//       },
+//     });
+//   } catch (error) {
+//     request.log.error(error);
+//     return reply.status(500).send({
+//       success: false,
+//       message: "Internal Server Error",
+//       error: error.message || error,
+//     });
+//   }
+// };
+
+
+
 export const getPersonalizedRecipe = async (request, reply) => {
   try {
     const userId = request.user?.id;
@@ -487,7 +643,7 @@ export const getPersonalizedRecipe = async (request, reply) => {
       const currentCount = await redis.get(dailyKey);
       const count = currentCount ? parseInt(currentCount) : 0;
 
-      if (count >= 5) {
+      if (count >= 50) {
         return reply.status(429).send({
           success: false,
           message: "Daily limit reached. Subscribe for unlimited access.",
@@ -586,6 +742,17 @@ export const getPersonalizedRecipe = async (request, reply) => {
       });
     }
 
+    // Check if the recipe is in user's favorites
+    const favorite = await prisma.favoriteRecipe.findFirst({
+      where: {
+        userId: userId,
+        recipeId: recipe.id,
+      },
+      select: {
+        id: true,
+      },
+    });
+
     await redis.sadd(shownRecipesKey, recipe.id);
     await redis.expire(shownRecipesKey, 24 * 60 * 60);
 
@@ -595,6 +762,8 @@ export const getPersonalizedRecipe = async (request, reply) => {
       data: {
         ...recipe,
         image: recipe.image ? getImageUrl(recipe.image) : null,
+        isFavorited: !!favorite, // This will be true if recipe is in favorites
+        favoriteId: favorite?.id || null, // Optional: include the favorite record ID
       },
     });
   } catch (error) {
