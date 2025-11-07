@@ -10,6 +10,7 @@ import {
   forgotPasswordVerifyOtp,
   forgotPasswordReset,
   forgotPasswordRecentOtp,
+  passwordReset,
   email2FASendOtp,
   email2FAVerifyOtp,
   email2FARecentOtp,
@@ -39,6 +40,9 @@ const authRoutes = (fastify: FastifyInstance) => {
   fastify.post("/forgotpassword/verifyotp", forgotPasswordVerifyOtp);
   fastify.post("/forgotpassword/reset", forgotPasswordReset);
   fastify.post("/forgotpassword/recentotp", forgotPasswordRecentOtp);
+
+  //reset password
+  fastify.post("/resetpassword", { preHandler: verifyUser("user", "admin") }, passwordReset);
 
   //TwoFactor authentication (2FA)
   fastify.post("/2fa/email/sendotp", email2FASendOtp);

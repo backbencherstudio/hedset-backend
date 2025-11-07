@@ -14,7 +14,6 @@ import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
 import { authenticator } from "otplib";
 import { uploadsDir } from "../../../config/storage.config";
- 
 
 const downloadAndSaveImage = async (imageUrl: string): Promise<string> => {
   try {
@@ -255,9 +254,7 @@ export const googleAuth = async (request, reply) => {
 
       const userResponse = {
         ...existingUser,
-        avatar: existingUser.avatar
-          ? getImageUrl(existingUser.avatar)
-          : null,
+        avatar: existingUser.avatar ? getImageUrl(existingUser.avatar) : null,
       };
 
       return reply.status(200).send({
@@ -423,7 +420,7 @@ export const adminLogin = async (request, reply) => {
 
     const userResponse = {
       ...user,
-      avatar: user.avatar ? getImageUrl(`/uploads/${user.avatar}`) : null,
+      avatar: user.avatar ? getImageUrl(user.avatar) : null,
     };
 
     delete userResponse.password;
@@ -697,6 +694,57 @@ export const forgotPasswordRecentOtp = async (request, reply) => {
       success: true,
       message: "New OTP sent successfully",
       otp: process.env.NODE_ENV === "development" ? newOtp : null,
+    });
+  } catch (error) {
+    request.log.error(error);
+    return reply.status(500).send({
+      success: false,
+      message: "Internal Server Error",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+};
+
+export const passwordReset = async (request, reply) => {
+  try {
+    const { newPassword, oldPasswoed } = request.body;
+
+    const userId = request.user.id;
+    const prisma = request.server.prisma;
+
+    if (!newPassword || !oldPasswoed) {
+      return reply.status(400).send({
+        success: false,
+        message: "Old password and new password are required!",
+      });
+    }
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) {
+      return reply.status(404).send({
+        success: false,
+        message: "User not found!",
+      });
+    }
+    const isOldPasswordValid = await bcrypt.compare(oldPasswoed, user.password);
+    if (!isOldPasswordValid) {
+      return reply.status(401).send({
+        success: false,
+        message: "Old password is incorrect!",
+      });
+    }
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedNewPassword },
+    });
+
+    return reply.status(200).send({
+      success: true,
+      message: "Password reset successfully!",
+      data: { id: user.id, email: user.email },
     });
   } catch (error) {
     request.log.error(error);
@@ -1059,9 +1107,7 @@ export const updateUser = async (request, reply) => {
       message: "User profile updated successfully",
       data: {
         ...updatedUser,
-        avatar: updatedUser.avatar
-          ? getImageUrl(updatedUser.avatar)
-          : null,
+        avatar: updatedUser.avatar ? getImageUrl(updatedUser.avatar) : null,
       },
     });
   } catch (error) {

@@ -15,6 +15,7 @@ export const createRecipe = async (request, reply) => {
       dietaryPreference,
       description,
       targetLifestyle,
+      price
     } = request.body;
 
     const requiredFields = [
@@ -28,6 +29,7 @@ export const createRecipe = async (request, reply) => {
       "dietaryPreference",
       "description",
       "targetLifestyle",
+      "price"
     ];
 
     const missingField = requiredFields.find((field) => !request.body[field]);
@@ -89,6 +91,7 @@ export const createRecipe = async (request, reply) => {
         description,
         targetLifestyle,
         image: request.file.filename,
+        price: parseFloat(price),
       },
     });
 
@@ -136,6 +139,7 @@ export const updateRecipe = async (request, reply) => {
       dietaryPreference,
       description,
       targetLifestyle,
+      price
     } = request.body;
 
     if (budget && !["High", "Medium", "Low"].includes(budget)) {
@@ -165,6 +169,7 @@ export const updateRecipe = async (request, reply) => {
       calories: calories && parseInt(calories),
       image: request.file?.filename,
       targetLifestyle,
+      price: price && parseFloat(price),
     };
 
     Object.keys(updateData).forEach(

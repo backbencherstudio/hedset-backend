@@ -17,6 +17,10 @@ export const createStripeProducts = async (request, reply) => {
       interval_count = 1,
     } = request.body;
 
+    console.log(name, description, amount, currency, interval, interval_count);
+    console.log("Request Body:", interval_count);
+    console.log("Request Body:", typeof interval_count);
+
     const prisma = request.server.prisma;
 
     if (!name || !description || !amount) {
@@ -42,7 +46,13 @@ export const createStripeProducts = async (request, reply) => {
       });
     }
 
-    if (interval_count < 1 || !Number.isInteger(interval_count)) {
+    const intervalCountNum = Number(interval_count);
+
+    if (
+      !Number.isFinite(intervalCountNum) ||
+      intervalCountNum < 1 ||
+      !Number.isInteger(intervalCountNum)
+    ) {
       return reply.status(400).send({
         success: false,
         message: "Interval count must be a positive integer",
@@ -72,12 +82,12 @@ export const createStripeProducts = async (request, reply) => {
       data: {
         name,
         description: Array.isArray(description)
-          ? description.join(", ")
+          ? description.map((d) => d.text).join(", ")
           : description,
-        amount,
+        amount: Number(amount),
         currency,
         interval,
-        interval_count,
+        interval_count: intervalCountNum,
         stripeProductId: product.id,
         stripePriceId: price.id,
       },
@@ -194,7 +204,7 @@ export const getSingleStripeProduct = async (request, reply) => {
     if (product.stripeProductId) {
       try {
         stripeProduct = await stripe.products.retrieve(product.stripeProductId);
-        
+
         if (product.stripePriceId) {
           stripePrice = await stripe.prices.retrieve(product.stripePriceId);
         }
@@ -213,19 +223,21 @@ export const getSingleStripeProduct = async (request, reply) => {
       interval_count: product.interval_count,
       stripeProductId: product.stripeProductId,
       stripePriceId: product.stripePriceId,
-      billingPeriod: `Every ${product.interval_count} ${product.interval}${product.interval_count > 1 ? 's' : ''}`,
+      billingPeriod: `Every ${product.interval_count} ${product.interval}${
+        product.interval_count > 1 ? "s" : ""
+      }`,
       isActive: stripeProduct ? stripeProduct.active : true,
-    //   stripeProduct: stripeProduct ? {
-    //     active: stripeProduct.active,
-    //     metadata: stripeProduct.metadata,
-    //     created: stripeProduct.created,
-    //   } : null,
-    //   stripePrice: stripePrice ? {
-    //     unit_amount: stripePrice.unit_amount,
-    //     currency: stripePrice.currency,
-    //     type: stripePrice.type,
-    //     recurring: stripePrice.recurring,
-    //   } : null,
+      //   stripeProduct: stripeProduct ? {
+      //     active: stripeProduct.active,
+      //     metadata: stripeProduct.metadata,
+      //     created: stripeProduct.created,
+      //   } : null,
+      //   stripePrice: stripePrice ? {
+      //     unit_amount: stripePrice.unit_amount,
+      //     currency: stripePrice.currency,
+      //     type: stripePrice.type,
+      //     recurring: stripePrice.recurring,
+      //   } : null,
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
     };
@@ -237,15 +249,14 @@ export const getSingleStripeProduct = async (request, reply) => {
     });
   } catch (error) {
     request.log.error(error);
-    
+
     return reply.status(500).send({
       success: false,
       message: "Failed to fetch product",
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
-
 
 export const updateStripeProducts = async (request, reply) => {
   try {
@@ -424,3 +435,6 @@ export const deleteStripeProducts = async (
     });
   }
 };
+function type(interval_count: any): any {
+  throw new Error("Function not implemented.");
+}

@@ -67,6 +67,7 @@ model Recipe {
   maxCookingTime  Int // maximum cooking time in minutes
   calories        Int
   targetLifestyle Lifestyle
+  price Float?
 
   categories String
   budget     budgetType

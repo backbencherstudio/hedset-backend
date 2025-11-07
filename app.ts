@@ -9,8 +9,8 @@ import { registerMultipart } from "./src/config/storage.config";
 const app = Fastify({ logger: true });
 
 app.register(cors, {
-  origin: "*",
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  origin: ["*", "http://103.161.8.25:3000"],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
 });
 
 registerMultipart(app);
