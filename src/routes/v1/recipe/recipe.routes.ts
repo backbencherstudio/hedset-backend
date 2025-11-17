@@ -3,6 +3,7 @@ import {
   createRecipe,
   deleteRecipe,
   getAllRecipes,
+  getSingleRecipes,
   getPersonalizedRecipe,
   updateRecipe,
 } from "./recipe.controllers";
@@ -41,6 +42,16 @@ const recipeRoutes = (fastify: FastifyInstance) => {
     },
     getAllRecipes
   );
+
+    fastify.get(
+    "/all/:id",
+    {
+      preHandler: [verifyUser("admin")],
+    },
+    getSingleRecipes
+  );
+
+  
 
   fastify.get(
     "/personalized",

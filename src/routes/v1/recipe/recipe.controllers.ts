@@ -324,6 +324,37 @@ export const getAllRecipes = async (request, reply) => {
   }
 };
 
+export const getSingleRecipes = async (request, reply) => {
+  try {
+    const { id } = request.params;
+    const prisma = request.server.prisma;
+    const recipe = await prisma.recipe.findUnique({
+      where: { id },
+    });
+    if (!recipe) {
+      return reply.status(404).send({
+        success: false,
+        message: "Recipe not found",
+      });
+    }
+    return reply.status(200).send({
+      success: true,
+      message: "Recipe fetched successfully",
+      data: {
+        ...recipe,
+        image: recipe.image ? getImageUrl(recipe.image) : null,
+      },
+    });
+  } catch (error) {
+    request.log.error(error);
+    return reply.status(500).send({ 
+      success: false,
+      message: "Internal Server Error",
+      error: error.message || error,
+    });
+  }
+};
+
 // export const getPersonalizedRecipe = async (request, reply) => {
 //   try {
 //     const userId = request.user?.id;

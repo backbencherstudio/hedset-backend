@@ -17,10 +17,6 @@ export const createStripeProducts = async (request, reply) => {
       interval_count = 1,
     } = request.body;
 
-    console.log(name, description, amount, currency, interval, interval_count);
-    console.log("Request Body:", interval_count);
-    console.log("Request Body:", typeof interval_count);
-
     const prisma = request.server.prisma;
 
     if (!name || !description || !amount) {
@@ -74,7 +70,7 @@ export const createStripeProducts = async (request, reply) => {
         interval: interval,
         interval_count: interval_count,
       },
-    };
+    };   
 
     const price = await stripe.prices.create(priceData);
 
