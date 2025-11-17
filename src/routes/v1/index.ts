@@ -8,6 +8,7 @@ import subscriptionRoutes from "./subscription/subscription.routes";
 import favoriteRoutes from "./favorite/favorite.routes";
 import aiRoutes from "./ai/ai.routes";
 import transactionRoutes from "./transactions/transactions.routes";
+import stripeRoutes from "./webhooks/stripe/webhooks.routes";
 
 async function routesV1(fastify: FastifyInstance) {
   const moduleRoutes = [
@@ -20,6 +21,7 @@ async function routesV1(fastify: FastifyInstance) {
     { path: "/favorite", route: favoriteRoutes },
     { path: "/transactions", route: transactionRoutes },
     { path: "/ai", route: aiRoutes },
+    { path: "/webhooks/stripe", route: stripeRoutes },
   ];
 
   moduleRoutes.forEach(({ path, route }) => {

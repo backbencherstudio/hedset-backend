@@ -2,9 +2,10 @@ import path from "path";
 import Stripe from "stripe";
 import { FastifyRequest, FastifyReply } from "fastify";
 
-const stripe = new Stripe(
-  "sk_test_51QuTWKClJBhr3sfikQjjaxPgDjsndVS0WlfusMAoxLzAsEOC7NYTKzGTSVkngmlKmSuNa6HGa0wRVLit80kVDRpa004vfKxrUO"
-);
+// const stripe = new Stripe(
+//   "sk_test_51QuTWKClJBhr3sfikQjjaxPgDjsndVS0WlfusMAoxLzAsEOC7NYTKzGTSVkngmlKmSuNa6HGa0wRVLit80kVDRpa004vfKxrUO"
+// );
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export const createStripeProducts = async (request, reply) => {
   try {
@@ -70,7 +71,7 @@ export const createStripeProducts = async (request, reply) => {
         interval: interval,
         interval_count: interval_count,
       },
-    };   
+    };
 
     const price = await stripe.prices.create(priceData);
 
